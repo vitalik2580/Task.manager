@@ -1,0 +1,5 @@
+php_value session.name session_id
+php_value session.hash_function sha256
+php_value session.gc_maxlifetime 1200
+php_value session.sid_length 40
+php_value session.sid_bits_per_character 6
