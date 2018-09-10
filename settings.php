@@ -1,11 +1,13 @@
 <?php
+error_reporting(-1);
+ini_set("display_errors", 1);
 require_once($_SERVER['DOCUMENT_ROOT'] . '/include/session_start.php');
 require_once($_SERVER['DOCUMENT_ROOT'] . '/include/controller.php');
 require_once($_SERVER['DOCUMENT_ROOT'] . '/include/function.php');
 require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/header.php");
-require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/navigation.php");
-$user_info = getUserInfo($_SESSION['user_id']);
-$countrys = getCountrys();
+getNavBar();
+$user_info = getUserName($_SESSION['user_id']);
+$countries = getCountries();
 ?>
     <div class="settings_container">
         <div class="row">
@@ -43,38 +45,28 @@ $countrys = getCountrys();
             <div class="col-6 settings_right">
                 <h4>Личная информация</h4>
                 <form action="<?= $_SERVER['PHP_SELF'] ?>" method="POST">
-
-                    <?php if (isset($notice_lastname)): ?>
-                        <p class="form_notice"><?= $notice_lastname ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_lastname) ? getSettingsNotice($notice_lastname) : '' ?>
                     <label>Фамилия: <input type="text" name="lastname"
                                            value="<?= isset($lastname) ? $lastname : $user_info['lastname'] ?>">
                     </label>
 
-                    <?php if (isset($notice_name)): ?>
-                        <p class="form_notice"><?= $notice_name ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_name) ? getSettingsNotice($notice_name) : '' ?>
                     <label>Имя: <input type="text" name="name"
                                        value="<?= isset($name) ? $name : $user_info['name'] ?>">
                     </label>
 
-                    <?php if (isset($notice_surname)): ?>
-                        <p class="form_notice"><?= $notice_surname ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_surname) ? getSettingsNotice($notice_surname) : '' ?>
                     <label>Отчество: <input type="text" name="surname"
                                             value="<?= isset($surname) ? $surname : $user_info['surname'] ?>">
                     </label>
 
-                    <?php if (isset($notice_email)): ?>
-                        <p class="form_notice"><?= $notice_email ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_email) ? getSettingsNotice($notice_email) : '' ?>
                     <label>E-mail: <input type="email" name="email"
                                           value="<?= isset($email) ? $email : $user_info['email'] ?>">
                     </label>
 
-                    <?php if (isset($notice_password)): ?>
-                        <p class="form_notice"><?= $notice_password ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_password) ? getSettingsNotice($notice_password) : '' ?>
+
                     <?php if (isset($success_password)): ?>
                         <p class="form_success"><?= $success_password ?></p>
                     <?php endif; ?>
@@ -83,19 +75,19 @@ $countrys = getCountrys();
                     <br>
 
                     <label>Страна: <select id="country" name="country">
-                            <?php foreach ($countrys as $key => $val) { ?>
+                            <?php foreach ($countries as $key => $val) { ?>
                                 <option value="<?= $val['id'] ?>"
                                     <?= $user_info['country_id'] == $val['id'] ? 'selected' : '' ?>><?= $val['name'] ?>
                                 </option>
                             <?php } ?>
                         </select></label>
-                    <label>Город: <select id="city" name="city">
+                    <label>Город:
+                        <span class="city">
 
-                        </select></label>
+                        </span>
+                    </label>
 
-                    <?php if (isset($notice_phone)): ?>
-                        <p class="form_notice"><?= $notice_phone ?></p>
-                    <?php endif; ?>
+                    <?= isset($notice_phone) ? getSettingsNotice($notice_phone) : '' ?>
                     <label>Телефон(моб.): <input class="settings_phone" type="text" name="phone"
                                                  value="<?= isset($phone) ? $phone : $user_info['phone'] ?>">
                     </label>
@@ -118,8 +110,4 @@ $countrys = getCountrys();
             </div>
         </div>
     </div>
-
-
-<?php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/footer.php");
-?>
+<?php require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/footer.php"); ?>

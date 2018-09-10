@@ -1,0 +1,1 @@
+<p class="form_notice"><?= $str ?></p>

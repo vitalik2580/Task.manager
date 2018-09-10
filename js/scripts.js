@@ -86,14 +86,6 @@ $(document).ready(function () {
         $(this).children('.settings').css('display', 'none');
     });
 
-    //закрыть модальное окно при клике вне его
-    $('body').on('click', '.wrapper_modal', function (e) {
-        location.reload();
-        //$('.wrapper_modal').css('display', 'none');
-    }).on('click', '.my_modal', function (e) {
-        e.stopPropagation();
-    });
-
     //закрывает модальное окно при клике на кнопку закрыть
     $('body').on('click', '.close_modal', function () {
         location.reload();
@@ -352,7 +344,7 @@ $(document).ready(function () {
         $(this).attr('class', 'task active_task');
         var taskId = $(this).attr('id');
         $.ajax({
-            url: "/blocks/comments.php",
+            url: "/include/controller.php",
             type: "POST",
             data: {
                 comments_to_task_id: taskId
@@ -467,7 +459,8 @@ $(document).ready(function () {
         });
     });
 
-    $('body').on('click', '.wrapper_modal', function () {
+    //закрывает модальное окно при клике на кнопку закрыть
+    $('body').on('click', '.close_user_info', function () {
         $('.wrapper_modal').css('display', 'none');
     });
 
@@ -506,7 +499,7 @@ $(document).ready(function () {
             selected_country: country_id
         },
         success: function (html) {
-            $('#city').html(html);
+            $('.city').html(html);
         }
     });
 

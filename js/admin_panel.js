@@ -28,7 +28,7 @@ $(document).ready(function () {
                     admin_panel_selected_user: user_id
                 },
                 success: function (html) {
-                    list_item.parents('.admin_panel_list_item').find('.changeUserLists').html(html);
+                    list_item.parents('.admin_panel_list_item').find('.select_city').html(html);
                 }
             });
         });

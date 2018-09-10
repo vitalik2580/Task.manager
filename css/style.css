@@ -673,3 +673,16 @@ body {
     color: #FFF;
     border-radius: 5px;
 }
+
+.close_user_info {
+    font-size: 22px;
+    color: #E81E62;
+    cursor: pointer;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+}
+
+.close_user_info:hover{
+    color: #F34236;
+}

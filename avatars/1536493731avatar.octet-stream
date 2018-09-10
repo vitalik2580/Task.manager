@@ -1,0 +1,275 @@
+-- phpMyAdmin SQL Dump
+-- version 4.7.3
+-- https://www.phpmyadmin.net/
+--
+-- Хост: 127.0.0.1:3306
+-- Время создания: Авг 03 2018 г., 13:24
+-- Версия сервера: 5.7.19
+-- Версия PHP: 7.1.7
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET AUTOCOMMIT = 0;
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- База данных: `mydb`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `colors_group_message`
+--
+
+CREATE TABLE `colors_group_message` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `rgb` varchar(45) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `colors_group_message`
+--
+
+INSERT INTO `colors_group_message` (`id`, `name`, `rgb`) VALUES
+(1, 'green', '#076705'),
+(2, 'red', '#EC0404'),
+(3, 'оrange', '#E18C59'),
+(4, 'blue', '#513EFD'),
+(5, 'pink', '#FB9797');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `group`
+--
+
+CREATE TABLE `group` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `group`
+--
+
+INSERT INTO `group` (`id`, `name`, `description`) VALUES
+(1, 'зарегистрированные пользователи', 'Пользователи не прошедшие модерацию, не могут писать сообщения.'),
+(2, 'Пользователь имеющий право писать сообщения', 'Пользователи прошедшие модерацию, которые могут писать сообщения.');
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `group_message`
+--
+
+CREATE TABLE `group_message` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `parent_id` int(11) NOT NULL,
+  `color_id` int(11) NOT NULL,
+  `date` datetime NOT NULL,
+  `create_user_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `group_message`
+--
+
+INSERT INTO `group_message` (`id`, `name`, `parent_id`, `color_id`, `date`, `create_user_id`) VALUES
+(1, 'Основные', 1, 1, '2018-08-03 12:00:00', 1),
+(2, 'Оповещения', 2, 3, '2018-08-03 12:00:00', 1),
+(3, 'Спам', 3, 2, '2018-08-03 12:00:00', 1),
+(4, 'По работе', 1, 1, '2018-08-03 12:00:00', 1),
+(5, 'Личные', 1, 5, '2018-08-03 12:00:00', 1),
+(6, 'Форумы', 2, 3, '2018-08-03 12:00:00', 1),
+(7, 'Магазины', 2, 2, '2018-08-03 12:00:00', 1),
+(8, 'Подписки', 2, 4, '2018-08-03 12:00:00', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `message`
+--
+
+CREATE TABLE `message` (
+  `id` int(11) NOT NULL,
+  `from_user_id` int(11) NOT NULL,
+  `message` text,
+  `title` varchar(255) DEFAULT NULL,
+  `date` datetime NOT NULL,
+  `to_user_id` int(11) NOT NULL,
+  `group_message_id` int(11) NOT NULL,
+  `read` int(1) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `login` varchar(255) NOT NULL,
+  `lastname` varchar(255) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `surname` varchar(255) DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `active` tinyint(1) DEFAULT NULL,
+  `send_for_email` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `users`
+--
+
+INSERT INTO `users` (`id`, `login`, `lastname`, `name`, `surname`, `email`, `password`, `phone`, `active`, `send_for_email`) VALUES
+(31, '1', NULL, NULL, NULL, '1', '6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b', NULL, NULL, NULL),
+(3, 'damir', 'Галявов', 'Дамир', 'Рашидович', 'email.su', '5906AC361A137E2D286465CD6588EBB5AC3F5AE955001100BC41577C3D751764', '1232123121', NULL, NULL),
+(2, 'ekaterina', 'Митрофанова', 'Екатерина', 'Сергеевна', 'email.ru', '6cf615d5bcaac778352a8f1f3360d23f02f34ec182e259897fd6ce485d7870d4', '124354653423', NULL, NULL),
+(4, 'marina', 'Митрофанова', 'Марина', 'Анатольевна', 'email.ru', 'B97873A40F73ABEDD8D685A7CD5E5F85E4A9CFB83EAC26886640A0813850122B', '3241243424', NULL, NULL),
+(5, 'nastya', 'Сртаршова', 'Анастасия', 'Викторовна', 'email.com', '8B2C86EA9CF2EA4EB517FD1E06B74F399E7FEC0FEF92E3B482A6CF2E2B092023', '131213543241', NULL, NULL),
+(30, 'sasfasdfdf', 'Котов', 'asdasdasdasd', 'Котяшкин', '1email@mail.ru', '1', NULL, NULL, NULL),
+(1, 'vitalik', 'Митрофанов', 'Виталий', 'Викторович', 'email.com', '0b14d501a594442a01c6859541bcb3e8164d183d32937b851835442f69d5c94e', '464562635745', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `user_group`
+--
+
+CREATE TABLE `user_group` (
+  `user_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `user_group`
+--
+
+INSERT INTO `user_group` (`user_id`, `group_id`) VALUES
+(1, 2),
+(2, 2),
+(3, 1),
+(4, 1),
+(5, 2),
+(31, 1);
+
+--
+-- Индексы сохранённых таблиц
+--
+
+--
+-- Индексы таблицы `colors_group_message`
+--
+ALTER TABLE `colors_group_message`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Индексы таблицы `group`
+--
+ALTER TABLE `group`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Индексы таблицы `group_message`
+--
+ALTER TABLE `group_message`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_group_message_color_group_message_idx` (`color_id`),
+  ADD KEY `fk_group_message_main_group_message1_idx` (`id`),
+  ADD KEY `k_group_message_group_message_idx` (`parent_id`);
+
+--
+-- Индексы таблицы `message`
+--
+ALTER TABLE `message`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `c_massage_key_idx` (`from_user_id`),
+  ADD KEY `k_message_users_idx` (`to_user_id`),
+  ADD KEY `k_message_group_message_idx` (`group_message_id`);
+
+--
+-- Индексы таблицы `users`
+--
+ALTER TABLE `users`
+  ADD UNIQUE KEY `login_UNIQUE` (`login`),
+  ADD UNIQUE KEY `id_UNIQUE` (`id`);
+
+--
+-- Индексы таблицы `user_group`
+--
+ALTER TABLE `user_group`
+  ADD PRIMARY KEY (`user_id`,`group_id`),
+  ADD KEY `c_user_key_idx` (`user_id`),
+  ADD KEY `c_group_key_idx` (`group_id`,`user_id`);
+
+--
+-- AUTO_INCREMENT для сохранённых таблиц
+--
+
+--
+-- AUTO_INCREMENT для таблицы `colors_group_message`
+--
+ALTER TABLE `colors_group_message`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+--
+-- AUTO_INCREMENT для таблицы `group`
+--
+ALTER TABLE `group`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+--
+-- AUTO_INCREMENT для таблицы `group_message`
+--
+ALTER TABLE `group_message`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+--
+-- AUTO_INCREMENT для таблицы `message`
+--
+ALTER TABLE `message`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+--
+-- AUTO_INCREMENT для таблицы `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+--
+-- Ограничения внешнего ключа сохраненных таблиц
+--
+
+--
+-- Ограничения внешнего ключа таблицы `group_message`
+--
+ALTER TABLE `group_message`
+  ADD CONSTRAINT `fk_group_message_color_group_message` FOREIGN KEY (`color_id`) REFERENCES `colors_group_message` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `k_group_message_group_message` FOREIGN KEY (`parent_id`) REFERENCES `group_message` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ограничения внешнего ключа таблицы `message`
+--
+ALTER TABLE `message`
+  ADD CONSTRAINT `k_message_group_message` FOREIGN KEY (`group_message_id`) REFERENCES `group_message` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `k_message_users` FOREIGN KEY (`to_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ограничения внешнего ключа таблицы `user_group`
+--
+ALTER TABLE `user_group`
+  ADD CONSTRAINT `c_group_key` FOREIGN KEY (`group_id`) REFERENCES `group` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `c_user_key` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

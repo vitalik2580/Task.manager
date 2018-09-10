@@ -1,10 +1,17 @@
 <?php
-require_once($_SERVER['DOCUMENT_ROOT'] . '/include/controller.php');
+error_reporting(-1);
+ini_set("display_errors", 1);
 require_once($_SERVER['DOCUMENT_ROOT'] . '/include/session_start.php');
+require_once($_SERVER['DOCUMENT_ROOT'] . '/include/controller.php');
 require_once($_SERVER['DOCUMENT_ROOT'] . '/include/function.php');
 require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/header.php");
-require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/navigation.php");
-$isInviteList = isInviteList();
+getNavBar();
+$userId = getUserId();
+$isInviteList = isInviteList($userId, currentListId());
+$countMyList = getNumMyLists($userId);
+$countInviteList = getNumInviteList($userId);
+$myListStatus = myListStatus();
+$inviteListStatus = inviteListStatus();
 ?>
 <div class="my_container">
     <div class="row">
@@ -31,11 +38,9 @@ $isInviteList = isInviteList();
         </div>
 
         <div class="col-4 tasks_comments">
-
-            <?php require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/user_info.php"); ?>
-
+            <?php getUserInfo(); ?>
             <div class="comments_wrapper">
-                <?php require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/comments.php"); ?>
+                <?php getMyComments(currentTaskId()) ?>
             </div>
             <div class="add_comment">
                 <textarea class="text_comment" name="" id="" cols="30" rows="10"></textarea>
