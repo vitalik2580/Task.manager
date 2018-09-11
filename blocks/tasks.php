@@ -1,2 +1,2 @@
 <?php
-getMyTasks(currentListId());
+getTasks(currentListId(), getUserId());

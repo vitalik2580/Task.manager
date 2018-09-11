@@ -34,8 +34,7 @@ $countries = getCountries();
                     </div>
                     <?php if (isset($notice_upload)) : ?>
                         <p style="color: #FEC007"><?= $notice_upload ?></p>
-                    <?php endif; ?>
-                    <?php if (isset($notice_delete)) : ?>
+                    <?php elseif (isset($notice_delete)) : ?>
                         <p style="color: #F34236"><?= $notice_delete ?></p>
                     <?php endif; ?>
                 </div>
@@ -45,27 +44,27 @@ $countries = getCountries();
             <div class="col-6 settings_right">
                 <h4>Личная информация</h4>
                 <form action="<?= $_SERVER['PHP_SELF'] ?>" method="POST">
-                    <?= isset($notice_lastname) ? getSettingsNotice($notice_lastname) : '' ?>
+                    <?= isset($notice_lastname) ? getNotice($notice_lastname) : '' ?>
                     <label>Фамилия: <input type="text" name="lastname"
                                            value="<?= isset($lastname) ? $lastname : $user_info['lastname'] ?>">
                     </label>
 
-                    <?= isset($notice_name) ? getSettingsNotice($notice_name) : '' ?>
+                    <?= isset($notice_name) ? getNotice($notice_name) : '' ?>
                     <label>Имя: <input type="text" name="name"
                                        value="<?= isset($name) ? $name : $user_info['name'] ?>">
                     </label>
 
-                    <?= isset($notice_surname) ? getSettingsNotice($notice_surname) : '' ?>
+                    <?= isset($notice_surname) ? getNotice($notice_surname) : '' ?>
                     <label>Отчество: <input type="text" name="surname"
                                             value="<?= isset($surname) ? $surname : $user_info['surname'] ?>">
                     </label>
 
-                    <?= isset($notice_email) ? getSettingsNotice($notice_email) : '' ?>
+                    <?= isset($notice_email) ? getNotice($notice_email) : '' ?>
                     <label>E-mail: <input type="email" name="email"
                                           value="<?= isset($email) ? $email : $user_info['email'] ?>">
                     </label>
 
-                    <?= isset($notice_password) ? getSettingsNotice($notice_password) : '' ?>
+                    <?= isset($notice_password) ? getNotice($notice_password) : '' ?>
 
                     <?php if (isset($success_password)): ?>
                         <p class="form_success"><?= $success_password ?></p>
@@ -87,12 +86,12 @@ $countries = getCountries();
                         </span>
                     </label>
 
-                    <?= isset($notice_phone) ? getSettingsNotice($notice_phone) : '' ?>
+                    <?= isset($notice_phone) ? getNotice($notice_phone) : '' ?>
                     <label>Телефон(моб.): <input class="settings_phone" type="text" name="phone"
                                                  value="<?= isset($phone) ? $phone : $user_info['phone'] ?>">
                     </label>
 
-                    <p>
+                    <p class="notice_email">
                         <input class="notice_email" name="notice_email" type="checkbox"
                             <?= $user_info['email_notice'] != 0 ? 'checked' : '' ?>>
                         Присылать уведомления на e-mail

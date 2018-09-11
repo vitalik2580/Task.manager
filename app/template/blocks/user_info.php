@@ -8,6 +8,8 @@
                 <span title="<?= $val['description'] ?>"><?= $val['name'] ?>;</span>
             <?php } ?>
         </p>
+        <p>Номер телефона: <a href="tel:<?= $phone ?>"><?= $phone ?></a></p>
+        <p>Проживает: <?= $lives ?></p>
     </div>
     <i class="close_user_info fa fa-times" aria-hidden="true"></i>
 </div>

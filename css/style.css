@@ -476,7 +476,6 @@ body {
 }
 
 .settings_right form p {
-    background-color: #FFFACC;
     padding: 3px 10px;
     border-radius: 4px;
 }
@@ -491,6 +490,10 @@ body {
     width: auto;
 }
 
+.notice_email {
+    background-color: #FFFACC;
+}
+
 .settings_right select {
     border: 4px solid #EBEBEB;
     border-radius: 4px;
@@ -498,9 +501,8 @@ body {
 }
 
 .form_notice {
-    font-size: 10px;
-    color: #F34236;
-    background-color: #FFF !important;
+    font-size: 14px;
+    color: #FE9576;
     margin-bottom: 0;
 }
 
@@ -683,6 +685,6 @@ body {
     top: 15px;
 }
 
-.close_user_info:hover{
+.close_user_info:hover {
     color: #F34236;
 }

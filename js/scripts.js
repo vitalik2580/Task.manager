@@ -229,15 +229,6 @@ $(document).ready(function () {
                 $('.my_lists').html(html);
             }
         });
-        //рассылка уведомлений по email
-        $.ajax({
-            url: "/include/send_mail_notice.php",
-            type: "POST",
-            data: {
-                delete_task: 1,
-                task_id: task_id
-            }
-        });
         //открытие модального окна с настройками списка(папки)
     }).on('click', '.setting_list', function (e) {
         e.stopPropagation();

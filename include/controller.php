@@ -19,15 +19,9 @@ if (isset($_POST['entrance'])) {
         $_SESSION['user_id'] = setUserId($email_auth);
         $_SESSION['active'] = 1;
         $_SESSION['login'] = $email_auth;
-        $email_auth = '';
-        $password_auth = '';
-        $error_auth = '';
-        unset($error_auth);
         header('Location: /');
-        exit();
-    } else {
-        $error_auth = $result;
     }
+    $error_auth = $result;
 }
 
 //смена логина
@@ -66,14 +60,17 @@ if (isset($_POST['registration'])) {
         $reg_error = $result;
     }
 }
-
+//стартуем сессию для коректной работы функций
 if (!isset($_SESSION['active'])) session_start();
 
 //кнопка выхода
 if (isset($_POST['exit'])) {
-    setcookie(session_name(), '', 3);
-    session_destroy();
-    header("Location: /authorization.php");
+    if (isset($_SESSION['active'])) {
+        setcookie(session_name(), '', 3, '/');
+        session_destroy();
+        header("Location: /authorization.php");
+    }
+    //header("Location: /authorization.php");
 }
 
 //записываем в сессию id активного списка
@@ -84,19 +81,19 @@ if (isset($_POST['active_list'])) {
 
 //добавление в БД нового списка(папки)
 if (isset($_POST['add_new_list'])) {
-    $user_info = getUserName(getUserId());
-    if (!empty($_POST['name_list'])) {
-        $newList = sqlProtected($_POST['name_list']);
-        $query = "INSERT INTO lists(`name`, `created_user_id`) 
-                  VALUES('$newList', '" . $_SESSION['user_id'] . "')";
-        mysqli_query(connectDB(), $query);
-    }
     $userId = getUserId();
-    $isInviteList = isInviteList($userId, currentListId());
+    $user_info = getUserName($userId);
+    $isInviteList = isInviteList($userId, $_SESSION['list_id']);
     $countMyList = getNumMyLists($userId);
     $countInviteList = getNumInviteList($userId);
     $myListStatus = myListStatus();
     $inviteListStatus = inviteListStatus();
+    if (!empty($_POST['name_list'])) {
+        $newList = sqlProtected($_POST['name_list']);
+        $query = "INSERT INTO `lists`(`name`, `created_user_id`) 
+                  VALUES('$newList', '{$_SESSION['user_id']}')";
+        mysqli_query(connectDB(), $query);
+    }
     require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/lists.php");
 }
 
@@ -104,21 +101,19 @@ if (isset($_POST['add_new_list'])) {
 if (isset($_POST['add_new_task'])) {
     if (!empty($_POST['text_task'])) {
         $date = date("Y-m-d", time());
-        $user_info = getUserName(getUserId());
+        $user_info = getUserName($_SESSION['user_id']);
         $textTask = sqlProtected($_POST['text_task']);
         $query = "INSERT INTO `tasks`(`text`, `list_id`, `date`)
-                  VALUES('$textTask', '" . $_SESSION['list_id'] . "', '$date')";
+                  VALUES('$textTask', '{$_SESSION['list_id']}', '$date')";
         mysqli_query(connectDB(), $query);
 
         $query = "SELECT `name`
                   FROM `lists`
-                  WHERE `id` = '" . $_SESSION['list_id'] . "'";
-        $result = mysqli_query(connectDB(), $query);
-        $name_list = mysqli_fetch_assoc($result);
-        mysqli_free_result($result);
+                  WHERE `id` = '{$_SESSION['list_id']}'";
+        $name_list = mysqli_fetch_assoc(mysqli_query(connectDB(), $query));
         //текст сообщения
-        $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-            " добавил(а) новую запись '$textTask' в папке '" . $name_list['name'] . "'.";
+        $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} " .
+            "добавил(а) новую запись '$textTask' в папке '{$name_list['name']}'.";
         sendEmailNotice($_SESSION['list_id'], $message);
     }
     require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
@@ -126,7 +121,7 @@ if (isset($_POST['add_new_task'])) {
 
 //удаление таска
 if (isset($_POST['delete_task'])) {
-    $user_info = getUserName(getUserId());
+    $user_info = getUserName($_SESSION['user_id']);
     $taskId = sqlProtected($_POST['task_id']);
     $taskId = preg_replace("/[^0-9]/", '', $taskId);
 
@@ -136,22 +131,19 @@ if (isset($_POST['delete_task'])) {
               LEFT JOIN `lists`
               ON `tasks`.`list_id` = `lists`.`id`
               WHERE `tasks`.`id` = '$taskId'";
-    $result = mysqli_query(connectDB(), $query);
-    $text_info = mysqli_fetch_assoc($result);
+    $text_info = mysqli_fetch_assoc(mysqli_query(connectDB(), $query));
 
     //удаляем таск
     $query = "DELETE FROM `tasks`
               WHERE `id` = '$taskId'";
     mysqli_query(connectDB(), $query);
-    if ($_SESSION['task_id'] == $taskId) {
-        $_SESSION['task_id'] = false;
-    }
-    require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
-    mysqli_free_result($result);
+
+    if ($_SESSION['task_id'] == $taskId) $_SESSION['task_id'] = false;
     //текст сообщения
-    $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-        " удалил(а) запись '" . $text_info['text'] . "' в папке '" . $text_info['name'] . "'.";
+    $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} " .
+        "удалил(а) запись '{$text_info['text']}' в папке '{$text_info['name']}'.";
     sendEmailNotice($_SESSION['list_id'], $message);
+    require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
 }
 
 //обновление сортировки тасков
@@ -170,31 +162,27 @@ if (isset($_POST['update_sort'])) {
 
 //удаление списка(папки)
 if (isset($_POST['delete_list'])) {
-    $user_info = getUserName(getUserId());
-    $list_id = sqlProtected($_POST['list_id']);
-    //имя изменяемого списка(папки)
-    $query = "SELECT `lists`.`name` AS `name`
-              FROM `lists`
-              WHERE `lists`.`id` = '$list_id'";
-    $result = mysqli_query(connectDB(), $query);
-    $name_list = mysqli_fetch_assoc($result);
-    mysqli_free_result($result);
-    //текст сообщения
-    $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-        " удалил(а) список '" . $name_list['name'] . "'.";
-    sendEmailNotice($_SESSION['list_id'], $message);
-    $query = "DELETE FROM `lists` 
-              WHERE `id` = '$list_id'";
-    mysqli_query(connectDB(), $query);
-    if ($_SESSION['list_id'] == $list_id) {
-        $_SESSION['list_id'] = false;
-    }
     $userId = getUserId();
-    $isInviteList = isInviteList($userId, currentListId());
+    $isInviteList = isInviteList($userId, $_SESSION['list_id']);
     $countMyList = getNumMyLists($userId);
     $countInviteList = getNumInviteList($userId);
     $myListStatus = myListStatus();
     $inviteListStatus = inviteListStatus();
+    $user_info = getUserName($userId);
+    $list_id = sqlProtected($_POST['list_id']);
+    //имя изменяемого списка(папки)
+    $query = "SELECT `name`
+              FROM `lists`
+              WHERE `lists`.`id` = '$list_id'";
+    $name_list = mysqli_fetch_assoc(mysqli_query(connectDB(), $query));
+    $query = "DELETE FROM `lists` 
+              WHERE `id` = '$list_id'";
+    mysqli_query(connectDB(), $query);
+    if ($_SESSION['list_id'] == $list_id) $_SESSION['list_id'] = false;
+    //текст сообщения
+    $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} " .
+        "удалил(а) список '{$name_list['name']}'.";
+    sendEmailNotice($list_id, $message);
     require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/lists.php");
 }
 
@@ -203,10 +191,15 @@ if (isset($_POST['update_tasks'])) {
     require($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
 }
 
+//обновление блока с коментариями
+if (isset($_POST['update_comments'])) {
+    getComments($_SESSION['task_id']);
+}
+
 //обновление списка со списками
 if (isset($_POST['update_lists'])) {
     $userId = getUserId();
-    $isInviteList = isInviteList($userId, currentListId());
+    $isInviteList = isInviteList($userId, $_SESSION['list_id']);
     $countMyList = getNumMyLists($userId);
     $countInviteList = getNumInviteList($userId);
     $myListStatus = myListStatus();
@@ -216,10 +209,11 @@ if (isset($_POST['update_lists'])) {
 
 //изменение таска
 if (isset($_POST['change_task_id'])) {
-    $user_info = getUserName(getUserId());
+    $user_info = getUserName($_SESSION['user_id']);
     $task_id = sqlProtected($_POST['change_task_id']);
     $move_to_folder_id = sqlProtected($_POST['move_to_folder']);
     $modified_text_task = sqlProtected($_POST['modified_text']);
+    $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} ";
 
     $query = "SELECT `tasks`.`text`, `tasks`.`list_id`, `lists`.`name`
               FROM `tasks`
@@ -228,62 +222,45 @@ if (isset($_POST['change_task_id'])) {
               WHERE `tasks`.`id` = '$task_id'";
     $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
-    $user_name = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'];
 
     if ($row['list_id'] != $move_to_folder_id) {
         $_SESSION['task_id'] = false;
-
         $row['text'] == $modified_text_task ?
-            $message .= $user_name . ' переместил(а) запись "' . $modified_text_task . '" в папку "' . $row['name'] . '".' :
-            $message .= $user_name . ' изменил(а) запись "' . $row['text'] . '" на "' . $modified_text_task .
-                '" и переместил(а) в папку "' . $row['name'] . '".';
-
-        sendEmailNotice($_SESSION['list_id'], $message);
+            $message .= "переместил(а) запись '$modified_text_task' в папку '{$row['name']}'." :
+            $message .= "изменил(а) запись '{$row['text']}' на '{$modified_text_task}' и переместил(а) в папку '{$row['name']}'.";
     } else {
-        $message .= $user_name . ' изменил(а) запись"' . $row['text'] . '" на "' . $modified_text_task . '" в папке "' . $row['name'] . '".';
-        sendEmailNotice($_SESSION['list_id'], $message);
+        $message .= "изменил(а) запись '{$row['text']}' на '$modified_text_task' в папке '{$row['name']}'.";
     }
-    mysqli_free_result($result);
-
+    sendEmailNotice($_SESSION['list_id'], $message);
     $query = "UPDATE `tasks` 
               SET `list_id` = '$move_to_folder_id', `text` = '$modified_text_task' 
               WHERE `id` = '$task_id'";
-    $result = mysqli_query(connectDB(), $query);
+    mysqli_query(connectDB(), $query);
     require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
 }
 
 //добавить коментарий
 if (isset($_POST['add_comment'])) {
-    $user_id = getUserId();
-    $task_id = currentTaskId();
-    $list_id = currentListId();
-    $user_info = getUserName($user_id);
-
+    $user_info = getUserName($_SESSION['user_id']);
     //добавляем коментарий
-    addComment($_POST['comment_text'], $task_id, $user_id);
-
+    addComment($_POST['comment_text'], $_SESSION['task_id'], $_SESSION['user_id']);
     $query = "SELECT `tasks`.`text` AS `task_text`, `tasks`.`id` AS `task_id`, `lists`.`name` AS `list_name`  
               FROM `tasks`
               LEFT JOIN `lists` 
               ON `tasks`.`list_id` = `lists`.`id`
-              WHERE `tasks`.`id` = '$task_id'";
+              WHERE `tasks`.`id` = '{$_SESSION['task_id']}'";
     $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
-
-    $commentText = sqlProtected($_POST['comment_text']);
-    $nameList = $row['list_name'];
-    $textTask = $row['task_text'];
-    $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-        ' оставил(а) коментарий "' . $commentText . '" к записи "' . $textTask . '" находящейся в папке "' . $nameList . '".';
-
-    sendEmailNoticeComment($list_id, $message);
-    getMyComments($task_id);
+    $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} оставил(а) коментарий" .
+    "'{$_POST['comment_text']}' к записи '{$row['task_text']}' находящейся в папке '{$row['list_name']}'.";
+    sendEmailNoticeComment($_SESSION['list_id'], $_SESSION['user_id'], $message);
+    getComments($_SESSION['task_id']);
 }
 
 //выводит коментарии к таску
 if (isset($_POST['comments_to_task_id'])) {
     $_SESSION['task_id'] = sqlProtected($_POST['comments_to_task_id']);
-    getMyComments($_SESSION['task_id']);
+    getComments($_SESSION['task_id']);
 }
 
 //выводит модальное окно с настройками списка(папки)
@@ -295,7 +272,7 @@ if (isset($_POST['setting_list'])) {
 //настройки списка(папки)
 if (isset($_POST['change_list'])) {
     $notice = [];
-    $user_info = getUserName(getUserId());
+    $user_info = getUserName($_SESSION['user_id']);
     //количество пользователей которым можно просматривать список
     is_array($_POST['arrCheckedUsers']) ? $countShared = count($_POST['arrCheckedUsers']) : $countShared = 0;
     //массив с id пользователей которым разрешено просматривать список
@@ -308,50 +285,43 @@ if (isset($_POST['change_list'])) {
         $notice['text'] = "Вы выбрали <b>$countShared</b> пользователей, лимит 5";
         $notice['color'] = "#F34236";
     } else {
-        //id активного списка
-        $list_id = $_SESSION['list_id'];
         //если меньше 5 пользователей то через цикл заносим всех пользователй которым разрешён просмотр списка в БД
-        $query = "INSERT IGNORE INTO `shared_lists` 
-                  VALUES ";
+        $query = "INSERT IGNORE INTO `shared_lists` VALUES";
         //формируем один запрос
         for ($i = 0; $i < $countShared; $i++) {
-            $query .= "('$list_id', '" . $arrUsersSharedId[$i] . "', '" . $_SESSION['user_id'] . "'),";
+            $query .= "('{$_SESSION['list_id']}', '{$arrUsersSharedId[$i]}', '{$_SESSION['user_id']}'),";
         }
         $query = substr($query, 0, -1);
         mysqli_query(connectDB(), $query);
 
         //старое имя папки
-        $query = "SELECT `lists`.`name` 
+        $query = "SELECT `name` AS `list_name`
                   FROM `lists` 
-                  WHERE `lists`.`id` = '$list_id'";
+                  WHERE `lists`.`id` = '{$_SESSION['list_id']}'";
         $result = mysqli_query(connectDB(), $query);
         $row = mysqli_fetch_assoc($result);
-        $oldNameList = $row['name'];
-        if ($oldNameList != $newNameList) {
-            $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-                " изменил(а) название списка с '$oldNameList' на '$newNameList'.";
+        if ($row['list_name'] != $newNameList) {
+            $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} " .
+                "изменил(а) название списка с '{$row['list_name']}' на '$newNameList'.";
             sendEmailNotice($_SESSION['list_id'], $message);
         }
 
         //обновляем имя списка(папки)
         $query = "UPDATE `lists` 
                   SET `name` = '$newNameList' 
-                  WHERE `id` = '$list_id'";
+                  WHERE `id` = '{$_SESSION['list_id']}'";
         mysqli_query(connectDB(), $query);
+
         //удалеем всех не выделенных пользователей из таблицы
+        $query = "DELETE FROM `shared_lists`
+                  WHERE `list_id` = '{$_SESSION['list_id']}'";
         if ($countShared > 0) {
-            $query = "DELETE FROM `shared_lists`
-                      WHERE `list_id` = '$list_id'
-                      AND `to_user_id` 
-                      NOT IN (";
+            $query .= "AND `to_user_id` NOT IN (";
             for ($i = 0; $i < $countShared; $i++) {
                 $query .= "'$arrUsersSharedId[$i]',";
             }
             $query = substr($query, 0, -1);
             $query .= ")";
-        } else {
-            $query = "DELETE FROM `shared_lists`
-                      WHERE `list_id` = '$list_id'";
         }
         mysqli_query(connectDB(), $query);
         $notice['text'] = "Изменения сохранены";
@@ -379,7 +349,7 @@ if (isset($_POST['change_color_task'])) {
     //обновляем цвет таска
     $query = "UPDATE `tasks` 
               SET `color_id` = '$color_id' 
-              WHERE `id` = '" . $_SESSION['task_id'] . "'";
+              WHERE `id` = '{$_SESSION['task_id']}'";
     mysqli_query(connectDB(), $query);
 
     //имя списка в котором находится таск
@@ -389,18 +359,15 @@ if (isset($_POST['change_color_task'])) {
               ON `lists`.`id` = `tasks`.`list_id`
               LEFT JOIN `colors`
               ON `tasks`.`color_id` = `colors`.`id`
-              WHERE `lists`.`id` = '" . $_SESSION['list_id'] . "'
-              AND `tasks`.`id` = '" . $_SESSION['task_id'] . "'
+              WHERE `lists`.`id` = '{$_SESSION['list_id']}'
+              AND `tasks`.`id` = '{$_SESSION['task_id']}'
               AND `colors`.`id` = '$color_id'";
     $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
 
-    $nameList = $row['list_name'];
-    $textTask = $row['text'];
-    $nameColor = $row['color_name'];
     //сообщение
-    $message = $user_info['lastname'] . " " . $user_info['name'] . " " . $user_info['surname'] .
-        " изменил(а) цвет записи '$textTask' на '$nameColor' в папке '$nameList'.";
+    $message = "{$user_info['lastname']} {$user_info['name']} {$user_info['surname']} " .
+        "изменил(а) цвет записи '{$row['text']}' на '{$row['color_name']}' в папке '{$row['list_name']}'.";
     sendEmailNotice($_SESSION['list_id'], $message);
     require_once($_SERVER['DOCUMENT_ROOT'] . "/blocks/tasks.php");
 }
@@ -409,26 +376,31 @@ if (isset($_POST['change_color_task'])) {
 if (isset($_POST['show_user_info'])) {
     $user_id = sqlProtected($_POST['user_id_info']);
     $user_info = getUserName($user_id);
+    if ($user_info['phone'] != null) {
+        $phone = preg_replace('/^(\d)(\d{3})(\d{3})(\d{2})(\d{2})$/', '+\1(\2)\3-\4-\5', $user_info['phone']);
+    } else {
+        $phone = 'не указан';
+    }
+    $user_info['country'] == null ? $lives = 'не указано' : $lives = "{$user_info['country']} {$user_info['city']}";
     $user_groups = getUserGroups($user_id);
-    $pathAva = getUserAvatar($user_id);
+    $pathAva = getPathAvatar($user_id);
     require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/blocks/user_info.php");
 }
 
 //Загрузка аватарки
 if (isset($_POST['upload_ava'])) {
-    $user_id = getUserId();
     $result = validateAvatar($_FILES['avatar']);
     if ($result !== true) {
         $notice_upload = $result;
     } else {
-        uploadAvatar($user_id);
+        deleteAvatar($_SESSION['user_id']);
+        uploadAvatar($_SESSION['user_id']);
     }
 }
 
 //удаление аватарки
 if (isset($_POST['delete_ava'])) {
-    $user_id = getUserId();
-    $result = deleteAvatar($user_id);
+    $result = deleteAvatar($_SESSION['user_id']);
     if ($result === true) header('Location: /settings.php');
     $notice_delete = $result;
 }
@@ -439,7 +411,7 @@ if (isset($_POST['selected_country'])) {
     $cities = getCities($country_id);
     $query = "SELECT `city_id` 
               FROM `users` 
-              WHERE `id` = " . $_SESSION['user_id'];
+              WHERE `id` = '{$_SESSION['user_id']}'";
     $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
     $myCity = $row['city_id'];
@@ -448,13 +420,13 @@ if (isset($_POST['selected_country'])) {
 
 //проверка и сохранение изменений настроек пользователя
 if (isset($_POST['save_change_settings'])) {
-    $error_form = [];
+    $error = [];
     //валидация поля имя
     if (isset($_POST['name'])) {
         $result = validateStr($_POST['name'], 'Имя');
         if ($result !== true) {
-            array_push($error_form, 'error_name');
             $notice_name = $result;
+            array_push($error, 'name');
         }
         $name = sqlProtected($_POST['name']);
     }
@@ -462,8 +434,8 @@ if (isset($_POST['save_change_settings'])) {
     if (isset($_POST['lastname'])) {
         $result = validateStr($_POST['lastname'], 'Фамилия');
         if ($result !== true) {
-            array_push($error_form, 'error_lastname');
             $notice_lastname = $result;
+            array_push($error, 'lastname');
         }
         $lastname = sqlProtected($_POST['lastname']);
     }
@@ -471,8 +443,8 @@ if (isset($_POST['save_change_settings'])) {
     if (isset($_POST['surname'])) {
         $result = validateStr($_POST['surname'], 'Отчество');
         if ($result !== true) {
-            array_push($error_form, 'error_surname');
             $notice_surname = $result;
+            array_push($error, 'surname');
         }
         $surname = sqlProtected($_POST['surname']);
     }
@@ -480,65 +452,43 @@ if (isset($_POST['save_change_settings'])) {
     if (isset($_POST['email']) && !empty($_POST['email'])) {
         if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
             $notice_email = "Не корректный email";
-            array_push($error_form, 'error_email');
+            array_push($error, 'email');
         }
         $email = sqlProtected($_POST['email']);
     } else {
         $notice_email = "Не заполнено поле email";
-        $email = '';
-        array_push($error_form, 'nothing_email');
+        array_push($error, 'email');
     }
     //валидация поля телефон
     if (isset($_POST['phone']) && !empty($_POST['phone'])) {
         $phone = preg_replace("/[^0-9]{1,11}/", '', $_POST['phone']);
         if (strlen($phone) != 11) {
             $notice_phone = "В номере должны быть 11 цифр";
-            array_push($error_form, 'error_phone');
+            array_push($error, 'phone');
         }
     } else {
         $notice_phone = "Не заполнено поле телефон";
-        $phone = '';
-        array_push($error_form, 'nothing_phone');
+        array_push($error, 'phone');
     }
     //валидация поля новый пароль
     if (isset($_POST['new_password']) && !empty($_POST['new_password'])) {
         $result = validatePassword($_POST['new_password']);
-        if ($result !== true) {
-            $notice_password = $result;
-            array_push($error_form, 'error_password');
-        }
+        $result !== true ? $notice_password = $result : array_push($error, 'new_password');
     }
     //формируем запрос для БД
-    if (empty($error_form)) {
-        $query = "UPDATE `users` SET `name` = '$name', `lastname` = '$lastname', `surname` = '$surname',
-                  `phone` = '$phone', `email` = '$email'
-                  ";
-        if (isset($_POST['country']) && is_int($country_id = ($_POST['country']) * 1)) {
-            $query .= ", `country_id` = '$country_id'";
-        }
-        if (isset($_POST['city']) && is_int($city_id = ($_POST['city']) * 1)) {
-            $query .= ", `city_id` = '$city_id'";
-        }
+    if (empty($error)) {
+        $query = "UPDATE `users` SET `name` = '$name', `lastname` = '$lastname', `surname` = '$surname', `phone` = '$phone', `email` = '$email'";
+        if (isset($_POST['country'])) $query .= ", `country_id` = '{$_POST['country']}'";
+        if (isset($_POST['city'])) $query .= ", `city_id` = '{$_POST['city']}'";
         if (isset($_POST['new_password']) && !empty($_POST['new_password'])) {
-            $new_password = hash('SHA256', $_POST['new_password']);
-            $query .= ", `password` = '$new_password'";
+            $query .= ", `password` = '" . hash('SHA256', $_POST['new_password']) . "'";
             $success_password = "Пароль успешно изменён";
         }
-        if (isset($_POST['notice_email'])) {
-            $query .= ", `email_notice` = '1'";
-        } else {
-            $query .= ", `email_notice` = '0'";
-        }
-        $query .= " WHERE `id` = '" . $_SESSION['user_id'] . "'";
-        $result = mysqli_query(connectDB(), $query);
+        isset($_POST['notice_email']) ? $query .= ", `email_notice` = '1'" : $query .= ", `email_notice` = '0'";
+        $query .= " WHERE `id` = '{$_SESSION['user_id']}'";
         //после удачного запроса удаляем переменные, что-бы отображались значения в инпутах из БД
-        if ($result) {
-            unset($name);
-            unset($surname);
-            unset($lastname);
-            unset($email);
-            unset($phone);
-        }
+        $result = mysqli_query(connectDB(), $query);
+        if ($result) unset($name, $surname, $lastname, $email, $phone);
     }
 }
 
@@ -546,25 +496,25 @@ if (isset($_POST['save_change_settings'])) {
 if (isset($_POST['admin_panel_selected_user'])) {
     $user_id = $_POST['admin_panel_selected_user'];
     $myLists = myLists($user_id);
-    require_once($_SERVER['DOCUMENT_ROOT'] . "/app/template/admin_panel/select_lists.php");
+    getSelectLists($user_id);
 }
 
 //сохранение изменения записи в админ панели
 if (isset($_POST['admin_change_task'])) {
-    $task_id = $_POST['task_id'];
-    $list_id = $_POST['list_id'];
-    $date = $_POST['date'];
     $text_task = sqlProtected($_POST['text_task']);
     $query = "UPDATE `tasks`
-              SET `text` = '$text_task', `date` = '$date',
-              `list_id` = '$list_id', `sort` = '0'
-              WHERE `id` = '$task_id'";
+              SET `text` = '$text_task', `date` = '{$_POST['date']}',
+              `list_id` = '{$_POST['list_id']}', `sort` = '0'
+              WHERE `id` = '{$_POST['task_id']}'";
     mysqli_query(connectDB(), $query);
 }
 
 //удаление записи из панели администратора
 if (isset($_POST['admin_delete_task'])) {
-    $task_id = $_POST['task_id'];
-    $query = "DELETE FROM `tasks` WHERE `id` = '$task_id'";
-    mysqli_query(connectDB(), $query);
+    mysqli_query(connectDB(), "DELETE FROM `tasks` WHERE `id` = '{$_POST['task_id']}'");
+}
+//удаляем сессию если пользователь не был авторизован
+if (!isset($_SESSION['active'])) {
+    setcookie(session_name(), '', 3, '/');
+    session_destroy();
 }

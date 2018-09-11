@@ -7,14 +7,11 @@ require_once($_SERVER['DOCUMENT_ROOT'] . '/app/template/header.php');
 <div class="form_auth_wrapper">
     <h1>Task.manager</h1>
     <form action="<?= $_SERVER['PHP_SELF'] ?>" method="post">
-        <?php if (!isset($_COOKIE['login'])) : ?>
-            <input type="email" name="email_auth" placeholder=" e-mail" value="<?= $email_auth ?>">
-        <?php endif; ?>
-        <?php if (isset($_COOKIE['login'])) : ?>
-            <input type="hidden" name="email_auth" value="<?= $_COOKIE['login'] ?>">
-        <?php endif; ?>
         <?php if (isset($_COOKIE['login'])) : ?>
             <p><?= $_COOKIE['login'] ?></p>
+            <input type="hidden" name="email_auth" value="<?= $_COOKIE['login'] ?>">
+        <?php else: ?>
+            <input type="email" name="email_auth" placeholder=" e-mail" value="<?= $email_auth ?>">
         <?php endif; ?>
         <input type="password" name="password_auth" placeholder=" password" value="<?= $password_auth ?>">
         <div class="btn_wrapper">
@@ -29,6 +26,4 @@ require_once($_SERVER['DOCUMENT_ROOT'] . '/app/template/header.php');
         </div>
     </form>
 </div>
-<?php
-require_once($_SERVER['DOCUMENT_ROOT'] . '/app/template/footer.php');
-?>
+<?php require_once($_SERVER['DOCUMENT_ROOT'] . '/app/template/footer.php'); ?>

@@ -21,9 +21,8 @@ function connectDB()
  */
 function sqlProtected($var)
 {
-    $connect = connectDB();
     $var = htmlspecialchars($var);
-    $var = mysqli_real_escape_string($connect, $var);
+    $var = mysqli_real_escape_string(connectDB(), $var);
     return $var;
 }
 
@@ -33,11 +32,10 @@ function sqlProtected($var)
  */
 function getNumMyLists($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT COUNT(*) 
               FROM `lists` 
               WHERE `created_user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $numRow = mysqli_fetch_assoc($result);
     return $numRow['COUNT(*)'];
 }
@@ -49,11 +47,10 @@ function getNumMyLists($user_id)
  */
 function getNumThisTasks($listId)
 {
-    $connect = connectDB();
     $query = "SELECT COUNT(*) 
               FROM `tasks` 
               WHERE `list_id` = '$listId'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $numTasks = mysqli_fetch_assoc($result);
     return $numTasks['COUNT(*)'];
 }
@@ -63,11 +60,10 @@ function getNumThisTasks($listId)
  */
 function getMyLists($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT `name`, `id` 
               FROM `lists` 
               WHERE `created_user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $list = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($list, $row);
@@ -86,11 +82,10 @@ function getMyLists($user_id)
  */
 function myLists($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT `name`, `id` 
               FROM `lists` 
               WHERE `created_user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $list = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($list, $row);
@@ -102,10 +97,11 @@ function myLists($user_id)
  * @param $listId
  * Выводит все таски списка беря его id из сессии
  */
-function getMyTasks($list_id)
+function getTasks($list_id, $user_id)
 {
     if ($list_id != false) {
-        $connect = connectDB();
+        $arrMylists = myLists($user_id);
+        $isInviteList = isInviteList($user_id, $list_id);
         $query = "SELECT `tasks`.`id` AS `id`, `tasks`.`text` AS `text`, 
                   `tasks`.`list_id` AS `list_id`, `colors`.`rgb` AS `rgb`  
                   FROM `tasks`
@@ -115,14 +111,11 @@ function getMyTasks($list_id)
                   ON `tasks`.`color_id` = `colors`.`id`
                   WHERE `list_id` = '$list_id'
                   ORDER BY `sort` ASC";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         $tasks = [];
         while ($row = mysqli_fetch_assoc($result)) {
             array_push($tasks, $row);
         }
-        $user_id = getUserId();
-        $arrMylists = myLists($user_id);
-        $isInviteList = isInviteList($user_id, $list_id);
         require_once($_SERVER['DOCUMENT_ROOT'] . '/app/template/blocks/my_tasks.php');
     }
 }
@@ -130,10 +123,9 @@ function getMyTasks($list_id)
 /**
  * Выводит все коментарии выбранного таска
  */
-function getMyComments($task_id)
+function getComments($task_id)
 {
     if ($task_id != false) {
-        $connect = connectDB();
         $query = "SELECT `comments`.`id` AS `id`, `comments`.`text` AS `text`, DATE_FORMAT(`comments`.`date`, '%e.%c.%y') AS `date`, 
                   `users`.`name` AS `name`, `users`.`lastname` AS `lastname`, `users`.`surname` AS `surname`, 
                   DATE_FORMAT(`comments`.`date`, '%H:%i') AS `time`, `comments`.`create_user_id` AS `create_user_id`
@@ -146,13 +138,13 @@ function getMyComments($task_id)
                   ON `comments`.`create_user_id` = `users`.`id`
                   WHERE `comments`.`task_id` = '$task_id'
                   ORDER BY `comments`.`date` ASC";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         $comments = [];
         while ($row = mysqli_fetch_assoc($result)) {
             array_push($comments, $row);
         }
         foreach ($comments as $key => $val) {
-            $pathAvatar = getUserAvatar($val['create_user_id']);
+            $pathAvatar = getPathAvatar($val['create_user_id']);
             require($_SERVER['DOCUMENT_ROOT'] . '/app/template/blocks/my_comments.php');
         }
     }
@@ -179,10 +171,9 @@ function addComment($str, $task_id, $user_id)
  */
 function getUsers()
 {
-    $connect = connectDB();
     $query = "SELECT `name`, `lastname`, `surname`, `id`  
               FROM `users`";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $users = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($users, $row);
@@ -192,18 +183,21 @@ function getUsers()
 
 /**
  * @return array
- * Функция возвращает массив с именем, фамилией, отчеством пользователя
+ * Функция возвращает массив с информацией пользователя
  */
 function getUserName($user_id)
 {
-    $connect = connectDB();
     if ($user_id != false) {
         $query = "SELECT `users`.`name`, `users`.`lastname`, `users`.`surname`, `users`.`email`, `users`.`phone`,
-                  `country_id`, `city_id`, `users`.`email_notice`,
+                  `country_id`, `city_id`, `users`.`email_notice`, `countries`.`name` AS `country`, `cities`.`name` AS `city`,
                   DATE_FORMAT(`users`.`date_registration`, '%e.%c.%y') AS `date`
                   FROM `users`
+                  LEFT JOIN `countries`
+                  ON `countries`.`id` = `users`.`country_id`
+                  LEFT JOIN `cities`
+                  ON `cities`.`id` = `users`.`city_id`
                   WHERE `users`.`id` = '$user_id'";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         $user = mysqli_fetch_assoc($result);
         return $user;
     }
@@ -216,7 +210,6 @@ function getUserName($user_id)
  */
 function getUserGroups($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT `groups`.`name`, `groups`.`description` 
               FROM `groups`
               LEFT JOIN `users_groups`
@@ -224,7 +217,7 @@ function getUserGroups($user_id)
               LEFT JOIN `users`
               ON `users_groups`.`user_id` = `users`.`id`
               WHERE `users`.`id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $user_group = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($user_group, $row);
@@ -240,12 +233,11 @@ function getUserGroups($user_id)
  */
 function getArrSharedList($list_id)
 {
-    $connect = connectDB();
     if ($list_id != false) {
         $query = "SELECT `to_user_id` 
                   FROM `shared_lists` 
                   WHERE `list_id` = '$list_id'";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         $users = [];
         while ($row = mysqli_fetch_assoc($result)) {
             array_push($users, $row);
@@ -295,11 +287,10 @@ function getModal($notice = null)
  */
 function inviteList($listId)
 {
-    $connect = connectDB();
     $query = "SELECT COUNT(*) 
               FROM `shared_lists` 
               WHERE `list_id` = '$listId'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $count = mysqli_fetch_assoc($result);
     $count['COUNT(*)'] > 0 ? $res = true : $res = false;
     return $res;
@@ -310,13 +301,12 @@ function inviteList($listId)
  */
 function getInviteLists($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT `lists`.`name` AS `name`, `lists`.`id` AS `id`
               FROM `lists`
               LEFT JOIN `shared_lists`
               ON `shared_lists`.`list_id` = `lists`.`id`
               WHERE `shared_lists`.`to_user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $inviteList = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($inviteList, $row);
@@ -334,11 +324,10 @@ function getInviteLists($user_id)
  */
 function getNumInviteList($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT COUNT(*) 
               FROM `shared_lists` 
               WHERE `to_user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $numRow = mysqli_fetch_assoc($result);
     return $numRow['COUNT(*)'];
 }
@@ -349,15 +338,14 @@ function getNumInviteList($user_id)
  */
 function isInviteList($user_id, $list_id)
 {
-    $connect = connectDB();
     if ($list_id != false) {
         $query = "SELECT COUNT(*) FROM `shared_lists` 
                   WHERE `list_id` = '$list_id'
                   AND `shared_user_id` != '$user_id'";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         $count = mysqli_fetch_assoc($result);
-        $count['COUNT(*)'] > 0 ? $res = true : $res = false;
-        return $res;
+        if ($count['COUNT(*)'] > 0) return true;
+        return false;
     }
 }
 
@@ -365,13 +353,12 @@ function isInviteList($user_id, $list_id)
  * @return mixed
  * функция возвращает строку с путём до аватарки пользователя
  */
-function getUserAvatar($userId)
+function getPathAvatar($userId)
 {
-    $connect = connectDB();
     $query = "SELECT `users`.`file_name_avatar` AS `file_name`
               FROM `users`
               WHERE `id` = '$userId'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
     if ($row['file_name'] == null) {
         return "/avatars/default_photo.png";
@@ -385,11 +372,10 @@ function getUserAvatar($userId)
  */
 function getColorsToTask()
 {
-    $connect = connectDB();
     $query = "SELECT *
               FROM `colors`";
     $colors = [];
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($colors, $row);
     }
@@ -402,10 +388,9 @@ function getColorsToTask()
  */
 function getCountries()
 {
-    $connect = connectDB();
     $query = "SELECT * 
               FROM `countries`";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $countries = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($countries, $row);
@@ -420,11 +405,10 @@ function getCountries()
  */
 function getCities($country_id)
 {
-    $connect = connectDB();
     $query = "SELECT * 
               FROM `cities` 
               WHERE `parent_country_id` = '$country_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $cities = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($cities, $row);
@@ -440,7 +424,6 @@ function getCities($country_id)
  */
 function sendEmailNotice($list_id, $message)
 {
-    $connect = connectDB();
     $query = "SELECT `users`.`email`
               FROM `shared_lists`
               LEFT JOIN `lists`
@@ -452,7 +435,7 @@ function sendEmailNotice($list_id, $message)
     $users = [];
     $mail_to = '';
 
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($users, $row);
     }
@@ -477,14 +460,11 @@ function sendEmailNotice($list_id, $message)
  * в приглашённом списке, то рассылка идёт автору если есть согласие и остальным пользователям которых пригласил
  * автор, кроме пользователя который оставил коментарий.
  */
-function sendEmailNoticeComment($list_id, $message)
+function sendEmailNoticeComment($list_id, $user_id, $message)
 {
-    $connect = connectDB();
     $mails = '';
-    $user_id = getUserId();
     $users = [];
     $is_invite_list = isInviteList($user_id, $list_id);
-
     //выборка всех пользователей приглашёных для просмотра списка и одобривших email рассылку
     $query = "SELECT `shared_lists`.`to_user_id`, `users`.`email`, `shared_lists`.`shared_user_id`
               FROM `shared_lists`
@@ -496,12 +476,10 @@ function sendEmailNoticeComment($list_id, $message)
               AND `users`.`email_notice` = '1'";
     //все пользователи кроме отправителя
     if ($is_invite_list) $query .= " AND `users`.`id` NOT IN ('$user_id')";
-
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($users, $row);
     }
-
     //если приглашённый список, то отправляем уведомление автору списка, если стоит согласие на уведомление
     if ($is_invite_list) {
         $query = "SELECT `users`.`email`
@@ -512,7 +490,7 @@ function sendEmailNoticeComment($list_id, $message)
                   ON `shared_lists`.`shared_user_id` = `users`.`id`
                   WHERE `lists`.`id` = '$list_id'
                   AND `users`.`email_notice` = '1'";
-        $result = mysqli_query($connect, $query);
+        $result = mysqli_query(connectDB(), $query);
         if (mysqli_num_rows($result) > 0) {
             $row = mysqli_fetch_assoc($result);
             array_push($users, $row);
@@ -532,14 +510,13 @@ function sendEmailNoticeComment($list_id, $message)
  */
 function isAdmin($user_id)
 {
-    $connect = connectDB();
     $query = "SELECT COUNT(*)
               FROM `users`
               LEFT JOIN `users_groups`
               ON `users_groups`.`user_id` = `users`.`id`
               WHERE `users_groups`.`group_id` = '1'
               AND `users_groups`.`user_id` = '$user_id'";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
     if ($row['COUNT(*)'] > 0) return true;
     return false;
@@ -550,17 +527,17 @@ function isAdmin($user_id)
  */
 function getAdminPanel()
 {
-    $connect = connectDB();
     $query = "SELECT `lists`.`name` AS `list_name`, `lists`.`id` AS `list_id`, `users`.`name`, `users`.`lastname`, 
-              `users`.`surname`, `tasks`.`text` AS `task_text`, DATE_FORMAT(`tasks`.`date`, '%Y-%m-%d') AS `task_date`, `tasks`.`id` AS `task_id`,
-              `users`.`id` AS `user_id` 
+              `users`.`surname`, `tasks`.`text` AS `task_text`, DATE_FORMAT(`tasks`.`date`, '%Y-%m-%d') AS `task_date`, 
+              `tasks`.`id` AS `task_id`, `users`.`id` AS `user_id` 
               FROM `lists`
               LEFT JOIN `tasks`
               ON `lists`.`id` = `tasks`.`list_id`
               LEFT JOIN `users`
               ON `users`.`id` = `lists`.`created_user_id`
+              WHERE `tasks`.`text` IS NOT NULL
               ORDER BY `tasks`.`id` ASC";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $admin_lists = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($admin_lists, $row);
@@ -571,15 +548,25 @@ function getAdminPanel()
 }
 
 /**
+ * @param $user_id
+ * @param null $list_id
+ * выводит список папок выбранного пользователя в админ панели
+ */
+function getSelectLists($user_id, $list_id = null)
+{
+    $userLists = myLists($user_id);
+    require($_SERVER['DOCUMENT_ROOT'] . '/app/template/admin_panel/select_lists.php');
+}
+
+/**
  * @return array
  * Возвращает массив со всеми списками(папками)
  */
 function getAllLists()
 {
-    $connect = connectDB();
     $query = "SELECT `name`, `id`
               FROM `lists`";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $allLists = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($allLists, $row);
@@ -593,10 +580,9 @@ function getAllLists()
  */
 function getAllUsers()
 {
-    $connect = connectDB();
     $query = "SELECT `id`, `name`, `lastname`, `surname`
               FROM `users`";
-    $result = mysqli_query($connect, $query);
+    $result = mysqli_query(connectDB(), $query);
     $allUsers = [];
     while ($row = mysqli_fetch_assoc($result)) {
         array_push($allUsers, $row);
@@ -612,6 +598,7 @@ function getNavBar()
     $user_id = getUserId();
     $user = getUserName($user_id);
     $isAdmin = isAdmin($user_id);
+
     $_SERVER['REQUEST_URI'] == '/admin_panel.php' ? $nameLink = 'Назад' : $nameLink = 'Панель администратора';
     $_SERVER['REQUEST_URI'] == '/admin_panel.php' ? $pathLink = '/' : $pathLink = '/admin_panel.php';
 
@@ -629,8 +616,9 @@ function getUserInfo()
     $user_id = getUserId();
     $user = getUserName($user_id);
     $task_colors = getColorsToTask();
-    $pathAvatar = getUserAvatar($user_id);
+    $pathAvatar = getPathAvatar($user_id);
     $isInviteList = isInviteList($user_id, currentListId());
+
     require_once($_SERVER['DOCUMENT_ROOT'] . '/blocks/user_info.php');
 }
 
@@ -640,7 +628,7 @@ function getUserInfo()
  */
 function getUserId()
 {
-    return $_SESSION['user_id'];
+    if (isset($_SESSION['user_id'])) return $_SESSION['user_id'];
 }
 
 /**
@@ -729,8 +717,8 @@ function deleteAvatar($user_id)
     $result = mysqli_query(connectDB(), $query);
     $row = mysqli_fetch_assoc($result);
     if ($row['file_name_avatar'] != null) {
-
-        if (unlink($_SERVER['DOCUMENT_ROOT'] . '/avatars/' . $row['file_name_avatar'])) {
+        $path = $_SERVER['DOCUMENT_ROOT'] . '/avatars/' . $row['file_name_avatar'];
+        if (file_exists($path) && unlink($path)) {
             $query = "UPDATE `users` 
                       SET `file_name_avatar` = NULL
                       WHERE `id` = '$user_id'";
@@ -749,7 +737,7 @@ function deleteAvatar($user_id)
  */
 function validatePassword($password)
 {
-    if (empty($password)) return $error = 'Не заполнено поле Password.';
+    if (empty($password)) return $error = 'Поле Password не заполнено.';
     if (preg_match("/[^a-z0-9]/iu", $password)) {
         return $error = 'Не допустимые значения в поле Password.';
     } elseif (!preg_match("/^[a-z0-9\w]{4,10}$/iu", $password)) {
@@ -787,7 +775,7 @@ function validateRegEmail($email)
 function validateStr($str, $name)
 {
     if (empty($str)) return $error = "Поле $name не заплнено.";
-    if (preg_match("/[^a-zа-я]/iu", $str)) return $error = "Не допустимые значения в поле $name.";
+    if (preg_match("/[^a-zа-я]/iu", $str) > 0) return $error = "Не допустимые значения в поле $name.";
     return true;
 }
 
@@ -870,7 +858,7 @@ function inviteListStatus()
  * @param $str
  * выводит шаблон уведомления об ошибке
  */
-function getSettingsNotice($str)
+function getNotice($str)
 {
     require($_SERVER['DOCUMENT_ROOT'] . "/app/template/settings/notice.php");
 }
